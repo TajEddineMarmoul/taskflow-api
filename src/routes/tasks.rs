@@ -2,7 +2,7 @@ use axum::{Json, http::StatusCode};
 
 use crate::models::task::{CreateTask, ErrorResponse, Task};
 
-pub fn list() -> Json<Vec<Task>> {
+pub async fn list() -> Json<Vec<Task>> {
     let tasks = vec![
         Task {
             id: 1,
@@ -17,7 +17,7 @@ pub fn list() -> Json<Vec<Task>> {
     Json(tasks)
 }
 
-pub fn create(
+pub async fn create(
     Json(payload): Json<CreateTask>,
 ) -> Result<(StatusCode, Json<Task>), (StatusCode, Json<ErrorResponse>)> {
     if payload.title.is_empty() {

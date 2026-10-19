@@ -5,5 +5,5 @@ mod tasks;
 pub fn create_router() -> Router {
     Router::new()
         .route("/health", get(health::check))
-        .route("/tasks", method_router)
+        .route("/tasks", get(tasks::list).post(tasks::create))
 }
