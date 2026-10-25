@@ -1,26 +1,25 @@
-use axum::{Json, http::StatusCode};
+use axum::{Json, extract::State, http::StatusCode};
+use sqlx::PgPool;
 
 use crate::models::task::{CreateTask, ErrorResponse, Task};
 
-pub async fn list() -> Json<Vec<Task>> {
-    let tasks = vec![
-        Task {
-            id: 1,
-            title: "Learn Axum".to_string(),
-        },
-        Task {
-            id: 2,
-            title: "Build a backend".to_string(),
-        },
-    ];
+pub async fn list(
+    State(pool): State<PgPool>,
+) -> Result<(StatusCode, Json<Vec<Task>>), (StatusCode, Json<ErrorResponse>)> {
+    let tasks = sqlx::query_as::<_, Task>("SELECT id, title FROM tasks ORDER BY id")
+        .fetch_all(&pool)
+        .await
+        .unwrap();
 
-    Json(tasks)
+    Ok((StatusCode::OK, Json(tasks)))
 }
 
 pub async fn create(
+    State(pool): State<PgPool>,
     Json(payload): Json<CreateTask>,
 ) -> Result<(StatusCode, Json<Task>), (StatusCode, Json<ErrorResponse>)> {
-    if payload.title.is_empty() {
+    let title = &payload.title.trim();
+    if title.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ErrorResponse {
@@ -28,11 +27,19 @@ pub async fn create(
             }),
         ));
     }
-
-    let task = Task {
-        id: 3,
-        title: payload.title,
-    };
+    let task =
+        sqlx::query_as::<_, Task>("INSERT INTO tasks (title) VALUES ($1) RETURNING id, title")
+            .bind(title)
+            .fetch_one(&pool)
+            .await
+            .map_err(|_| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(ErrorResponse {
+                        error: "Database operation failed".to_string(),
+                    }),
+                )
+            })?;
 
     Ok((StatusCode::CREATED, Json(task)))
 }

@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
+use sqlx::prelude::FromRow;
 
-#[derive(Serialize)]
+#[derive(Serialize, FromRow)]
 pub struct Task {
-    pub id: u64,
+    pub id: i64,
     pub title: String,
 }
 
